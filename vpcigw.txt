@@ -2,10 +2,10 @@
 vpc=Web_VPC
 igw=WebIG
 aws ec2 create-vpc \
-  --cidr-block 192.168.0.0/16
-  --tag-specification ResourceType=vpc,Tags=[{Key=Name,Value=$vpc}]
+  --cidr-block 192.168.0.0/16 \
+  --tag-specification ResourceType=vpc,Tags='[{Key=Name,Value='"$vpc"'}]'
 
 aws ec2 create-internet-gateway \
-  --tag-specifications ResourceType=internet-gateway,Tags=[{Key=Name,Value=$igw}]
+  --tag-specifications ResourceType=internet-gateway,Tags='[{Key=Name,Value='"$igw"'}]'
 
 
