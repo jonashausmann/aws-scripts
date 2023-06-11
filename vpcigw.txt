@@ -1,11 +1,19 @@
 #!/bin/bash
 vpc=Web_VPC
 igw=WebIG
-aws ec2 create-vpc \
+vpcid=$(aws ec2 create-vpc \
   --cidr-block 192.168.0.0/16 \
-  --tag-specification ResourceType=vpc,Tags='[{Key=Name,Value='"$vpc"'}]'
+  --tag-specification ResourceType=vpc,Tags='[{Key=Name,Value='"$vpc"'}]' \
+  --query Vpc.VpcId \
+  --output text)
 
-aws ec2 create-internet-gateway \
-  --tag-specifications ResourceType=internet-gateway,Tags='[{Key=Name,Value='"$igw"'}]'
+igwid=$(aws ec2 create-internet-gateway \
+  --tag-specifications ResourceType=internet-gateway,Tags='[{Key=Name,Value='"$igw"'}]' \
+  --query InternetGateway.InternetGatewayId \
+  --output text)
+
+aws ec2 attach-internet-gateway \
+  --internet-gateway-id $igwid \
+  --vpc-id $vpcid
 
 
