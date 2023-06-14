@@ -1,0 +1,10 @@
+#!/bin/bash 
+bucketarn=arn:aws:s3:::cfst-3029-ad5313dccfbde190a175a-vpcflowlogsbucket-gizmymniho49
+vpcid=vpc-0dbe63a6aa91d9cbd
+aws ec2 create-flow-logs \
+  --resource-type VPC \
+  --resource-ids $vpcid\
+  --traffic-type ALL \
+  --log-destination-type s3 \
+  --log-destination-type $bucketarn\
+  --max-aggregation-interval 60
