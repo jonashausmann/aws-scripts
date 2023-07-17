@@ -6,5 +6,5 @@ aws ec2 create-flow-logs \
   --resource-ids $vpcid\
   --traffic-type ALL \
   --log-destination-type s3 \
-  --log-destination-type $bucketarn\
+  --log-destination $bucketarn\
   --max-aggregation-interval 60

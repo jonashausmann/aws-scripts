@@ -1,0 +1,155 @@
+#!/bin/bash
+
+# VPC variables
+vpccidr=10.0.0.0/16
+vpcname=HoLVPC
+
+# public subnet variables
+pubsubname=sn-public-a
+pubcidr=10.0.1.0/24
+pubavail=us-east-1a
+
+# private subnet variables
+privsubname=sn-private-b
+privcidr=10.0.2.0/24
+privavail=us-east-1b
+
+# Internet Gateway variables
+igwname=hol-VPCIGW
+
+# Route table variables
+routename=publicRT
+routecidr=0.0.0.0/0
+
+vpcid=$(aws ec2 create-vpc \
+    --cidr-block $vpccidr \
+    --tag-specification ResourceType=vpc,Tags='[{Key=Name,Value='"$vpcname"'}]'
+    --query Vpc.VpcId \
+    --output-text)
+
+echo VPC $vpcid has been created
+
+subnet-create==() {
+    aws ec2 create-subnet \
+        --vpc-id $1 \
+        --cidr-block $2 \
+        --availability-zone $3 \
+        --tag-specification ResourceType=subnet,Tags='[{Key=Name,Value='"$3"'}]'
+        --query subnet.subnetID
+        --output text
+    echo Subnet $3 has been created
+}
+
+subnetID=$(subnet-create $vpcid $pubcidr $pubavail $pubsubname)
+echo $subnetID
+privSubID=$(subnet-create $vpcid $privcidr $privavail $privsubname)
+echo $privSubID
+
+aws ec2 modify-subnet-attribute --subnet-id $subnetID --map-public-ip-on-launch
+echo Attribute on subnet $subnetID has been modified
+
+
+#aws ec2 create-subnet \
+#    --vpc-id $vpcid\
+#    --cidr-block $pubcidr \
+#    --availability-zone $pubavail \
+#    --tag-specification ResourceType=subnet,Tags='[{Key=Name,Value='"$pubsubname"'}]'
+
+
+#aws ec2 create-subnet \
+#   --vpc-id $vpcid\
+#   --cidr-block $privcidr \
+#   --availability-zone $privavail \
+#   --tag-specification ResourceType=subnet,Tags='[{Key=Name,Value='"$privsubname"'}]'
+   
+igwid=$(aws ec2 create-internet-gateway \
+   --tag-specification ResourceType=internet-gateway,Tags='[{Key=Name,Value='"$igwname"'}]' \
+   --query InternetGateway.InternetGatewayId \
+   --output-text)
+echo Internet Gateway $igwid has been created
+
+aws ec2 attach-internet-gateway \
+    --internet-gateway-id $igwid \
+    --vpc-id $vpcid
+echo Internet Gateway $igwid has been attached to $vpcid
+
+routeId=$(aws ec2 create-route-table \
+    --vpc-id $vpcid \
+    --tag-specification ResourceType=route-table,Tags='[{Key=Name,Value='"$routename"'}]' \
+    --query route.routeId \
+    --output text)
+echo Route table $routeID has been created
+
+aws ec2 create-route \
+    --route-table-id $routeId \
+    --destination-cidr-block $routecidr \
+    --gateway-id $igwid
+echo Route from $routeID to $igwid using $routecidr has been established
+
+aws ec2 associate-route-table \
+    --route-table-id $routeID \
+    --subnet-id $subnetID
+echo Route table $routeID has been associated with $subnetID
+
+# Public EC2 Configuration
+instancetype=t3.micro
+pubec2name=hol-pub-instance
+pubkeypair=vpcpubhol
+
+# Security Group info
+securityName=holpubSG
+
+# Private EC2 variables
+privec2name=hol-priv-instance
+privkeypair=vpcprivhol
+
+secID=$(aws ec2 create-security-group \
+    --group-name $securityName \
+    --description "Allow traffic from HoLVPC and my IP address" \
+    --vpc-id $vpcid \
+    --query security-group.group.ID \
+    --output text)
+echo Security Group $secID has been created
+
+myIp=$(curl https://checkip.amazonaws.com)
+aws ec2 authorize-security-group-ingress \
+    --group-id $secID \
+    --protocol tcp \
+    --port 22 \
+    --cidr $myIP
+echo SSH Authorized at $mpIP
+
+aws ec2 authorize-security-group-ingress \
+    --group-id $secID \
+    --protocol tcp \
+    --port 22 \
+    --cidr $vpccidr
+echo SSH Authorized at $vpccidr 
+
+aws ec2 create-key-pair \
+    --key-name $pubkeypair
+echo Keypair $pubkeypair Created
+
+aws ec2 run-instances \
+    --image-id resolve:ssm:/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2 \
+    --instance-type $instancetype \
+    --subnet-id $subnetID \
+    --security-group-ids $secID \
+    --associate-public-ip-address \
+    --key-name $pubkeypair
+    --tag-specifications ResourceType=instance,Tags='[{Key=Name,Value='"$pubsubname"'}]'
+echo EC2 instance $pubec2name has been created
+
+aws ec2 create-key-pair \
+    --key-name $privkeypair
+echo Key Pair $privkeypair has been created
+
+aws ec2 run-instances \
+    --image-id resolve:ssm:/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2 \
+    --instance-type $instancetype \
+    --subnet-id $privsubID \
+    --no-associate-public-ip-address \
+    --key-name $privkeypair
+    --tag-specifications ResourceType=instance,Tags='[{Key=Name,Value='"$privsubname"'}]'
+
+echo EC2 instance $privec2name has been created
