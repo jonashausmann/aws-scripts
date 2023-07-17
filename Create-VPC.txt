@@ -25,7 +25,7 @@ vpcid=$(aws ec2 create-vpc \
     --cidr-block $vpccidr \
     --tag-specification ResourceType=vpc,Tags='[{Key=Name,Value='"$vpcname"'}]' \
     --query Vpc.VpcId \
-    --output-text)
+    --output text)
 
 echo VPC $vpcid has been created
 
@@ -51,7 +51,7 @@ echo Attribute on subnet $subnetID has been modified
 igwid=$(aws ec2 create-internet-gateway \
    --tag-specification ResourceType=internet-gateway,Tags='[{Key=Name,Value='"$igwname"'}]' \
    --query InternetGateway.InternetGatewayId \
-   --output-text)
+   --output text)
 echo Internet Gateway $igwid has been created
 
 aws ec2 attach-internet-gateway \
@@ -93,7 +93,7 @@ secID=$(aws ec2 create-security-group \
     --group-name $securityName \
     --description "Allow traffic from HoLVPC and my IP address" \
     --vpc-id $vpcid \
-    --query security-group.group.ID \
+    --query security-group.groupID \
     --output text)
 echo Security Group $secID has been created
 
