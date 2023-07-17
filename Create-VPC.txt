@@ -33,7 +33,7 @@ subnetID=$(aws ec2 create-subnet \
     --vpc-id $vpcid\
     --cidr-block $pubcidr \
     --availability-zone $pubavail \
-    --tag-specification ResourceType=subnet,Tags='[{Key=Name,Value='"$pubsubname"'}]'
+    --tag-specification ResourceType=subnet,Tags='[{Key=Name,Value='"$pubsubname"'}]' \
     --query subnet.subnetID \
     --output text)
 
@@ -41,7 +41,7 @@ privSubID=$(aws ec2 create-subnet \
    --vpc-id $vpcid \
    --cidr-block $privcidr \
    --availability-zone $privavail \
-   --tag-specification ResourceType=subnet,Tags='[{Key=Name,Value='"$privsubname"'}]'
+   --tag-specification ResourceType=subnet,Tags='[{Key=Name,Value='"$privsubname"'}]' \
    --query subnet.subnetID \
    --output text)
 
