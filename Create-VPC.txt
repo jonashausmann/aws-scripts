@@ -23,45 +23,31 @@ routecidr=0.0.0.0/0
 
 vpcid=$(aws ec2 create-vpc \
     --cidr-block $vpccidr \
-    --tag-specification ResourceType=vpc,Tags='[{Key=Name,Value='"$vpcname"'}]'
+    --tag-specification ResourceType=vpc,Tags='[{Key=Name,Value='"$vpcname"'}]' \
     --query Vpc.VpcId \
     --output-text)
 
 echo VPC $vpcid has been created
 
-subnet-create==() {
-    aws ec2 create-subnet \
-        --vpc-id $1 \
-        --cidr-block $2 \
-        --availability-zone $3 \
-        --tag-specification ResourceType=subnet,Tags='[{Key=Name,Value='"$3"'}]'
-        --query subnet.subnetID
-        --output text
-    echo Subnet $3 has been created
-}
+subnetID=$(aws ec2 create-subnet \
+    --vpc-id $vpcid\
+    --cidr-block $pubcidr \
+    --availability-zone $pubavail \
+    --tag-specification ResourceType=subnet,Tags='[{Key=Name,Value='"$pubsubname"'}]'
+    --query subnet.subnetID \
+    --output text)
 
-subnetID=$(subnet-create $vpcid $pubcidr $pubavail $pubsubname)
-echo $subnetID
-privSubID=$(subnet-create $vpcid $privcidr $privavail $privsubname)
-echo $privSubID
+privSubID=$(aws ec2 create-subnet \
+   --vpc-id $vpcid \
+   --cidr-block $privcidr \
+   --availability-zone $privavail \
+   --tag-specification ResourceType=subnet,Tags='[{Key=Name,Value='"$privsubname"'}]'
+   --query subnet.subnetID \
+   --output text)
 
 aws ec2 modify-subnet-attribute --subnet-id $subnetID --map-public-ip-on-launch
 echo Attribute on subnet $subnetID has been modified
 
-
-#aws ec2 create-subnet \
-#    --vpc-id $vpcid\
-#    --cidr-block $pubcidr \
-#    --availability-zone $pubavail \
-#    --tag-specification ResourceType=subnet,Tags='[{Key=Name,Value='"$pubsubname"'}]'
-
-
-#aws ec2 create-subnet \
-#   --vpc-id $vpcid\
-#   --cidr-block $privcidr \
-#   --availability-zone $privavail \
-#   --tag-specification ResourceType=subnet,Tags='[{Key=Name,Value='"$privsubname"'}]'
-   
 igwid=$(aws ec2 create-internet-gateway \
    --tag-specification ResourceType=internet-gateway,Tags='[{Key=Name,Value='"$igwname"'}]' \
    --query InternetGateway.InternetGatewayId \
@@ -136,7 +122,7 @@ aws ec2 run-instances \
     --subnet-id $subnetID \
     --security-group-ids $secID \
     --associate-public-ip-address \
-    --key-name $pubkeypair
+    --key-name $pubkeypair \
     --tag-specifications ResourceType=instance,Tags='[{Key=Name,Value='"$pubsubname"'}]'
 echo EC2 instance $pubec2name has been created
 
@@ -149,7 +135,7 @@ aws ec2 run-instances \
     --instance-type $instancetype \
     --subnet-id $privsubID \
     --no-associate-public-ip-address \
-    --key-name $privkeypair
+    --key-name $privkeypair \
     --tag-specifications ResourceType=instance,Tags='[{Key=Name,Value='"$privsubname"'}]'
 
 echo EC2 instance $privec2name has been created
